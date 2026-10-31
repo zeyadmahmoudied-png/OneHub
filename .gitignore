@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+dist/
+build/
+*.tsbuildinfo
+.next/
+out/
+
+# Env & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs & coverage
+logs/
+*.log
+npm-debug.log*
+coverage/
+
+# Android
+apps/android/.gradle/
+apps/android/local.properties
+apps/android/**/build/
+apps/android/**/*.apk
+apps/android/**/*.aab
+
+# Prisma
+backend/prisma/*.db
+backend/prisma/*.db-journal
