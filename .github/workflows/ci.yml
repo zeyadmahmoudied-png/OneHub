@@ -125,11 +125,17 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: ''
 
-      - name: Accept licenses
-        run: yes | sdkmanager --licenses || true
+      - name: Install Android platform packages
+        run: |
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+          yes | sdkmanager --licenses || true
 
       - name: Assemble Debug APK
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload Debug APK
