@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: bootstrap-foundation
+  cancel-in-progress: false
+
 jobs:
   commit-files:
     runs-on: ubuntu-latest
@@ -16,6 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -27,7 +32,6 @@ jobs:
           mkdir -p apps/android/gradle/wrapper
           curl -fsSL -o apps/android/gradle/wrapper/gradle-wrapper.jar \
             https://github.com/gradle/gradle/raw/v8.11.1/gradle/wrapper/gradle-wrapper.jar
-          # verify ZIP magic
           python3 -c "p=open('apps/android/gradle/wrapper/gradle-wrapper.jar','rb').read(4); assert p==b'PK\\x03\\x04', p"
           test -f apps/android/gradlew
           test -f apps/android/gradlew.bat
@@ -55,7 +59,18 @@ jobs:
                   apps/web/package-lock.json
           if git diff --cached --quiet; then
             echo "No changes to commit"
-          else
-            git commit -m "chore: commit gradle-wrapper.jar and npm lockfiles (official sources)"
-            git push
+            exit 0
           fi
+          git commit -m "chore: commit gradle-wrapper.jar and npm lockfiles (official sources)"
+          # reconcile concurrent pushes (e.g. other workflow edits)
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then
+              echo "Push succeeded"
+              exit 0
+            fi
+            echo "Push conflict, retry $i"
+            sleep 3
+          done
+          echo "Failed to push after retries"
+          exit 1
