@@ -1,16 +1,55 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppDto } from './dto/create-app.dto';
 import { UpdateAppDto } from './dto/update-app.dto';
+
+export type FindAllParams = {
+  status?: string;
+  q?: string;
+  page?: number;
+  limit?: number;
+};
 
 @Injectable()
 export class AppsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
-    return this.prisma.app.findMany({
-      orderBy: { displayNameEn: 'asc' },
-    });
+  async findAll(params: FindAllParams = {}) {
+    const page = Math.max(1, params.page ?? 1);
+    const limit = Math.min(100, Math.max(1, params.limit ?? 50));
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.AppWhereInput = {};
+    if (params.status) {
+      where.status = params.status;
+    }
+    if (params.q?.trim()) {
+      const q = params.q.trim();
+      where.OR = [
+        { appId: { contains: q, mode: 'insensitive' } },
+        { displayNameEn: { contains: q, mode: 'insensitive' } },
+        { displayNameAr: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.app.findMany({
+        where,
+        orderBy: { displayNameEn: 'asc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.app.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
   }
 
   async findByAppId(appId: string) {
