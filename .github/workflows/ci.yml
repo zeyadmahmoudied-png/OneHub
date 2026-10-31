@@ -143,16 +143,13 @@ jobs:
           mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
           yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses >/tmp/sdk-licenses.txt || true
-          # compileSdk 35 + androidx.core:1.15.0 require platform 35
           sdkmanager --sdk_root="$ANDROID_HOME" \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
 
       - name: Write local.properties
-        run: |
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          cat local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
       - name: Assemble Debug APK
         id: assemble
@@ -161,10 +158,12 @@ jobs:
           ./gradlew :app:assembleDebug --no-daemon --stacktrace > /tmp/gradle-build.log 2>&1
           code=$?
           echo "gradle exit=$code"
-          tail -n 80 /tmp/gradle-build.log
-          if [ $code -eq 0 ]; then
-            ls -la app/build/outputs/apk/debug/ || true
-          fi
+          echo "==== Kotlin / compiler diagnostics ===="
+          grep -E '^e: |^w: file://' /tmp/gradle-build.log || true
+          echo "==== FAILURE / What went wrong ===="
+          grep -A 30 'What went wrong' /tmp/gradle-build.log || true
+          echo "==== tail ===="
+          tail -n 40 /tmp/gradle-build.log
           exit $code
 
       - name: Upload gradle log on failure
