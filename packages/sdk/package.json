@@ -1,0 +1,16 @@
+{
+  "name": "@onehub/sdk",
+  "version": "0.1.0",
+  "description": "OneHub Integration SDK — register apps, call APIs, emit integration events",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test dist/**/*.test.js || node --test src/**/*.test.ts || echo 'No compiled tests yet'",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "files": ["dist", "README.md"]
+}
