@@ -10,6 +10,17 @@ export type JwtPayload = {
   role: string;
 };
 
+function resolveAccessSecret(config: ConfigService): string {
+  const secret = config.get<string>('JWT_ACCESS_SECRET');
+  if (!secret || secret.length < 32) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_ACCESS_SECRET must be set (min 32 chars) in production');
+    }
+    return 'dev-only-access-secret-min-32-chars!!';
+  }
+  return secret;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -19,7 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_ACCESS_SECRET') || 'dev-access-secret-change-me-32chars',
+      secretOrKey: resolveAccessSecret(config),
     });
   }
 
