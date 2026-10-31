@@ -1,28 +1,47 @@
-# Phase 1 Closeout
+# Phase 1 — Foundation Closeout
 
-## Intended exit criteria
+**Repository:** https://github.com/zeyadmahmoudied-png/OneHub  
+**Date:** 2026-10-31
 
-| Criterion | How verified |
+## Exit criteria
+
+| Criterion | Verification |
 |-----------|----------------|
-| Backend build | GitHub Actions job `backend` |
-| Backend unit tests (Auth + Apps) | `npm test` in CI — must not use `--passWithNoTests` |
-| Postgres migrate + smoke | CI service `postgres` + `prisma migrate deploy` + `scripts/ci-smoke.mjs` |
+| Backend build + unit tests | CI job `backend` — no `--passWithNoTests` |
+| Postgres migrate + smoke | CI Postgres 16 + `prisma migrate deploy` + `scripts/ci-smoke.mjs` |
 | Web typecheck + build | CI job `web` |
-| SDK build + tests | CI job `sdk` (`node --test` after `tsc`) |
-| Android Debug APK | CI job `android` + artifact `onehub-debug-apk` |
+| SDK build + tests | CI job `sdk` |
+| Android `assembleDebug` + APK | CI job `android` + artifact `onehub-debug-apk` |
+| Gradle Wrapper in Git | `gradlew`, `gradlew.bat`, `gradle-wrapper.jar`, properties (8.11.1) |
+| Lockfiles + `npm ci` only | backend, web, sdk locks committed; CI fails if `npm ci` fails |
 
-## CI URL
+## Committed infrastructure
 
-https://github.com/zeyadmahmoudied-png/OneHub/actions
+### Gradle Wrapper (official Gradle 8.11.1)
 
-After the closeout commits land on `main`, open the latest workflow run. **Do not treat this document as proof of a green run** — confirm the Actions UI.
+- `apps/android/gradlew`
+- `apps/android/gradlew.bat`
+- `apps/android/gradle/wrapper/gradle-wrapper.jar`
+- `apps/android/gradle/wrapper/gradle-wrapper.properties` → `gradle-8.11.1-bin.zip`
 
-## Known gaps still open at closeout time (agent environment)
+CI verifies these files exist and does **not** download the wrapper at runtime.
 
-1. **`package-lock.json` not committed** for backend / web / sdk — CI falls back to `npm install`. Generate locks locally with `npm install` and commit them when network allows.
-2. **`gradle-wrapper.jar` / `gradlew` may be missing on remote** — CI job generates wrapper via `gradle/actions/setup-gradle` when `gradlew` is absent. Prefer committing the full wrapper for fully offline local builds.
-3. **Agent could not finish long `npm install` / local Android SDK builds** due to environment limits; verification is delegated to GitHub Actions.
+### npm lockfiles
 
-## Roadmap
+- `backend/package-lock.json`
+- `apps/web/package-lock.json`
+- `packages/sdk/package-lock.json`
 
-All 23 advanced features remain listed in `docs/ROADMAP.md`. Phase 2 is **not** started by this closeout.
+## Reference runs
+
+- Prior full green (APK ~11 MB): https://github.com/zeyadmahmoudied-png/OneHub/actions/runs/41235767261
+- Latest Actions: https://github.com/zeyadmahmoudied-png/OneHub/actions
+
+Confirm the newest `CI` workflow run on `main` is green after the lock/wrapper commits.
+
+## Explicit non-goals
+
+- Phase 2 **not started**
+- All **23** advanced features remain in `docs/ROADMAP.md` only
+- No Control Center source assumed or rewritten
+- No APK-in-APK
