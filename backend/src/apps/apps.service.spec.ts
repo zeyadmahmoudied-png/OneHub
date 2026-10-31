@@ -42,11 +42,14 @@ describe('AppsService', () => {
     expect(service).toBeDefined();
   });
 
-  it('findAll returns list from prisma', async () => {
+  it('findAll returns paginated list', async () => {
     const apps = [{ appId: 'my-plan', displayNameEn: 'My Plan' }];
     prisma.app.findMany.mockResolvedValue(apps);
-    const result = await service.findAll();
-    expect(result).toEqual(apps);
+    prisma.app.count.mockResolvedValue(1);
+    const result = await service.findAll({ page: 1, limit: 10 });
+    expect(result.items).toEqual(apps);
+    expect(result.total).toBe(1);
+    expect(result.page).toBe(1);
     expect(prisma.app.findMany).toHaveBeenCalled();
   });
 
