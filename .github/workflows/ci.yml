@@ -20,8 +20,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
         run: npm install
@@ -29,7 +27,7 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
         env:
-          DATABASE_URL: "postgresql://user:pass@localhost:5432/onehub?schema=public"
+          DATABASE_URL: "postgresql://onehub:onehub_dev_password@localhost:5432/onehub?schema=public"
 
       - name: Build
         run: npm run build
@@ -37,4 +35,39 @@ jobs:
       - name: Unit tests
         run: npm test -- --passWithNoTests
         env:
-          DATABASE_URL: "postgresql://user:pass@localhost:5432/onehub?schema=public"
+          DATABASE_URL: "postgresql://onehub:onehub_dev_password@localhost:5432/onehub?schema=public"
+          JWT_ACCESS_SECRET: "ci-access-secret-min-32-characters!!"
+          JWT_REFRESH_SECRET: "ci-refresh-secret-min-32-characters!"
+
+  web:
+    name: Web build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000
+
+  sdk:
+    name: SDK build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm run build
+
+  # Android requires Android SDK + Gradle wrapper; not run in this lightweight CI yet.
+  # Documented in apps/android/README.md for local/Android Studio builds.
