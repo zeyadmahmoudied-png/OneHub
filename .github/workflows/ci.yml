@@ -131,8 +131,6 @@ jobs:
             curl -fsSL -o gradlew.bat https://raw.githubusercontent.com/gradle/gradle/v8.11.1/gradlew.bat
           fi
           chmod +x gradlew
-          head -1 gradlew
-          ls -la gradle/wrapper/
 
       - name: Install Android command-line tools and packages
         run: |
@@ -145,10 +143,11 @@ jobs:
           mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
           yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses >/tmp/sdk-licenses.txt || true
+          # compileSdk 35 + androidx.core:1.15.0 require platform 35
           sdkmanager --sdk_root="$ANDROID_HOME" \
             "platform-tools" \
-            "platforms;android-34" \
-            "build-tools;34.0.0"
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
       - name: Write local.properties
         run: |
@@ -162,7 +161,10 @@ jobs:
           ./gradlew :app:assembleDebug --no-daemon --stacktrace > /tmp/gradle-build.log 2>&1
           code=$?
           echo "gradle exit=$code"
-          tail -n 120 /tmp/gradle-build.log
+          tail -n 80 /tmp/gradle-build.log
+          if [ $code -eq 0 ]; then
+            ls -la app/build/outputs/apk/debug/ || true
+          fi
           exit $code
 
       - name: Upload gradle log on failure
