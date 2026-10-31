@@ -5,23 +5,39 @@ NestJS + Prisma API.
 ## Requirements
 
 - Node.js 22+
-- PostgreSQL (local or remote)
+- PostgreSQL (use root `docker compose up -d`)
 
 ## Setup
 
 ```bash
+# from repo root
+docker compose up -d
+
 cd backend
 cp .env.example .env
-# edit DATABASE_URL and JWT secrets
 npm install
 npx prisma generate
-npx prisma migrate dev --name init
+npx prisma migrate deploy
+npm run prisma:seed
 npm run start:dev
 ```
 
-Health: `GET http://localhost:3000/health`  
-Apps: `GET http://localhost:3000/apps`  
-Seed known apps: `POST http://localhost:3000/apps/seed`
+## Endpoints
+
+| Method | Path | Auth |
+|--------|------|------|
+| GET | `/health` | public |
+| POST | `/auth/register` | public (rate limited) |
+| POST | `/auth/login` | public (rate limited) |
+| POST | `/auth/refresh` | public |
+| POST | `/auth/logout` | public |
+| GET | `/auth/me` | Bearer access token |
+| GET | `/apps` | public (supports `?q=&status=&page=&limit=`) |
+| GET | `/apps/:appId` | public |
+| POST | `/apps` | ADMIN or DEVELOPER |
+| PATCH | `/apps/:appId` | ADMIN or DEVELOPER |
+| DELETE | `/apps/:appId` | ADMIN |
+| POST | `/apps/seed` | ADMIN |
 
 ## Tests
 
