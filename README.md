@@ -25,52 +25,89 @@ OneHub is a multi-app control plane that keeps every application fully independe
 | `youtube-creator`   | YouTube Creator       | Planned    |
 | `control-center`    | Control Center        | Future     |
 
-## Platform Sections
+## Quick start (local)
 
-- **Home** — Overview & quick actions
-- **Apps** — App registry & launch
-- **Workspace** — Unified working area
-- **Integration Center** — Cross-app actions & recipes
-- **AI Assistant** — Command center (phased)
-- **Analytics** — Cross-app insights (permission-aware)
-- **Developer Studio** — Builds, releases, SDK, compatibility
-- **Security Center** — Auth, roles, audit, isolation
-- **Settings** — Platform preferences
+### 1. PostgreSQL
 
-## Tech Stack (Phase 1)
+```bash
+docker compose up -d
+# user/password/db from docker-compose.yml → onehub / onehub_dev_password / onehub
+```
 
-| Layer          | Choice                          | Reason                                      |
-|----------------|---------------------------------|---------------------------------------------|
-| Android        | Kotlin + Jetpack Compose + M3   | Modern, official, excellent RTL support     |
-| Web Dashboard  | Next.js 15 + Tailwind + shadcn  | Fast, SSR-ready, low cost                   |
-| Backend        | NestJS + Prisma                 | Type-safe, modular, easy to scale           |
-| Database       | PostgreSQL                      | Strong isolation, RLS-ready, migrations     |
-| Auth           | JWT + Refresh Tokens            | No paid dependency, full control            |
-| CI             | GitHub Actions                  | Free for public repos                       |
-| Monorepo       | Simple folders + pnpm workspaces| Clear boundaries, easy CI                   |
+### 2. Backend
 
-## Repository Structure
+```bash
+cd backend
+cp .env.example .env   # set JWT secrets (≥32 chars)
+npm ci                 # or npm install if lock missing
+npx prisma generate
+npx prisma migrate deploy
+npm run prisma:seed
+npm run start:dev      # http://localhost:3000
+```
+
+Health: `GET /health`  
+Auth: `POST /auth/register`, `POST /auth/login`  
+Apps: `GET /apps`
+
+### 3. Web dashboard
+
+```bash
+cd apps/web
+npm ci
+# optional: NEXT_PUBLIC_API_URL=http://localhost:3000
+npm run dev            # http://localhost:3001
+```
+
+### 4. Android
+
+```bash
+cd apps/android
+chmod +x gradlew
+./gradlew :app:assembleDebug
+# APK: app/build/outputs/apk/debug/app-debug.apk
+```
+
+Or open `apps/android` in Android Studio and Run. Emulator reaches host API at `10.0.2.2:3000`.
+
+### 5. SDK
+
+```bash
+cd packages/sdk
+npm ci
+npm run build
+npm test
+```
+
+### 6. Tests
+
+```bash
+cd backend && npm test
+cd packages/sdk && npm test
+```
+
+CI: `.github/workflows/ci.yml` (Backend + Postgres, Web, SDK, Android Debug APK artifact).
+
+## Repository structure
 
 ```
 OneHub/
-├── apps/
-│   ├── android/          # Kotlin + Compose client
-│   └── web/              # Next.js admin & user dashboard
-├── backend/              # NestJS API + Prisma
-├── packages/
-│   └── sdk/              # Integration SDK for third-party apps
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── ROADMAP.md
-│   ├── DATABASE_SCHEMA.md
-│   └── SECURITY.md
-├── .github/workflows/
-└── README.md
+├── apps/android/     # Kotlin + Compose
+├── apps/web/         # Next.js 15
+├── backend/          # NestJS + Prisma
+├── packages/sdk/     # Integration SDK
+├── docs/             # Architecture, roadmap, security
+├── docker-compose.yml
+└── .github/workflows/ci.yml
 ```
 
-## Getting Started
+## Documentation
 
-See `docs/ROADMAP.md` and individual package READMEs after Phase 1 lands.
+- [Architecture](docs/ARCHITECTURE.md)
+- [Roadmap](docs/ROADMAP.md) — includes the 23 advanced features for later phases
+- [Database schema](docs/DATABASE_SCHEMA.md)
+- [Security](docs/SECURITY.md)
+- [Phase 1 status](docs/PHASE_1_STATUS.md)
 
 ## License
 
