@@ -6,10 +6,11 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --test dist/**/*.test.js || node --test src/**/*.test.ts || echo 'No compiled tests yet'",
+    "test": "npm run build && node --test dist/index.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "typescript": "^5.7.2"
   },
   "files": ["dist", "README.md"]
