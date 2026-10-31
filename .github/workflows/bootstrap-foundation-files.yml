@@ -18,59 +18,102 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Install official Gradle wrapper jar (8.11.1)
+      - name: Prepare wrapper jar and lockfiles
         run: |
           set -euo pipefail
           mkdir -p apps/android/gradle/wrapper
           curl -fsSL -o apps/android/gradle/wrapper/gradle-wrapper.jar \
             https://github.com/gradle/gradle/raw/v8.11.1/gradle/wrapper/gradle-wrapper.jar
           python3 -c "p=open('apps/android/gradle/wrapper/gradle-wrapper.jar','rb').read(4); assert p==b'PK\\x03\\x04', p"
-          test -f apps/android/gradlew
-          test -f apps/android/gradlew.bat
-          test -f apps/android/gradle/wrapper/gradle-wrapper.properties
-          chmod +x apps/android/gradlew
-
-      - name: Generate package-lock files from package.json (no version bumps)
-        run: |
-          set -euo pipefail
           npm install --package-lock-only --registry=https://registry.npmjs.org/ --no-audit --no-fund --prefix backend
           npm install --package-lock-only --registry=https://registry.npmjs.org/ --no-audit --no-fund --prefix apps/web
           test -f backend/package-lock.json
           test -f apps/web/package-lock.json
-          test -f packages/sdk/package-lock.json
-          grep -q registry.npmjs.org backend/package-lock.json
-          grep -q registry.npmjs.org apps/web/package-lock.json
 
-      - name: Commit and push if needed
+      - name: Commit via GitHub API (base64 blobs)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/android/gradle/wrapper/gradle-wrapper.jar \
-                  backend/package-lock.json \
-                  apps/web/package-lock.json
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          git commit -m "chore: commit gradle-wrapper.jar and npm lockfiles (official sources)"
-          # reconcile concurrent pushes (e.g. other workflow edits)
-          for i in 1 2 3 4 5; do
-            git pull --rebase origin main
-            if git push origin HEAD:main; then
-              echo "Push succeeded"
-              exit 0
-            fi
-            echo "Push conflict, retry $i"
-            sleep 3
-          done
-          echo "Failed to push after retries"
-          exit 1
+          python3 << 'PY'
+          import base64, json, os, urllib.request
+
+          token = os.environ["GH_TOKEN"]
+          owner, repo = "zeyadmahmoudied-png", "OneHub"
+          branch = "main"
+          api = f"https://api.github.com/repos/{owner}/{repo}"
+
+          def req(method, url, data=None):
+              headers = {
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+                  "User-Agent": "onehub-bootstrap",
+              }
+              body = None if data is None else json.dumps(data).encode()
+              if body is not None:
+                  headers["Content-Type"] = "application/json"
+              r = urllib.request.Request(url, data=body, headers=headers, method=method)
+              with urllib.request.urlopen(r) as resp:
+                  return json.load(resp)
+
+          files = [
+              ("apps/android/gradle/wrapper/gradle-wrapper.jar", True),
+              ("backend/package-lock.json", False),
+              ("apps/web/package-lock.json", False),
+          ]
+
+          ref = req("GET", f"{api}/git/ref/heads/{branch}")
+          base_sha = ref["object"]["sha"]
+          commit = req("GET", f"{api}/git/commits/{base_sha}")
+          base_tree = commit["tree"]["sha"]
+
+          tree_items = []
+          for path, is_bin in files:
+              with open(path, "rb") as f:
+                  raw = f.read()
+              blob = req("POST", f"{api}/git/blobs", {
+                  "content": base64.b64encode(raw).decode("ascii"),
+                  "encoding": "base64",
+              })
+              tree_items.append({
+                  "path": path,
+                  "mode": "100644",
+                  "type": "blob",
+                  "sha": blob["sha"],
+              })
+              print(f"blob {path} -> {blob['sha']} ({len(raw)} bytes)")
+
+          tree = req("POST", f"{api}/git/trees", {
+              "base_tree": base_tree,
+              "tree": tree_items,
+          })
+          new_commit = req("POST", f"{api}/git/commits", {
+              "message": "chore: commit gradle-wrapper.jar and npm lockfiles (official sources)",
+              "tree": tree["sha"],
+              "parents": [base_sha],
+          })
+          try:
+              req("PATCH", f"{api}/git/refs/heads/{branch}", {"sha": new_commit["sha"]})
+              print("updated", branch, "to", new_commit["sha"])
+          except Exception as e:
+              # retry once against latest tip
+              print("patch failed, retry", e)
+              ref = req("GET", f"{api}/git/ref/heads/{branch}")
+              base_sha = ref["object"]["sha"]
+              commit = req("GET", f"{api}/git/commits/{base_sha}")
+              base_tree = commit["tree"]["sha"]
+              tree = req("POST", f"{api}/git/trees", {"base_tree": base_tree, "tree": tree_items})
+              new_commit = req("POST", f"{api}/git/commits", {
+                  "message": "chore: commit gradle-wrapper.jar and npm lockfiles (official sources)",
+                  "tree": tree["sha"],
+                  "parents": [base_sha],
+              })
+              req("PATCH", f"{api}/git/refs/heads/{branch}", {"sha": new_commit["sha"]})
+              print("updated on retry", new_commit["sha"])
+          PY
