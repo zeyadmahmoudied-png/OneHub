@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.onehub.app.data.ApiClient
 import com.onehub.app.data.AppItem
 import com.onehub.app.data.AuthRequest
+import com.onehub.app.data.AuthUser
 import com.onehub.app.data.SessionStore
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -41,7 +42,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(onApps: () -> Unit, onLogin: () -> Unit, onRegister: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
         verticalArrangement = Arrangement.Center,
     ) {
         Text("OneHub", style = MaterialTheme.typography.headlineLarge)
@@ -50,11 +53,11 @@ fun HomeScreen(onApps: () -> Unit, onLogin: () -> Unit, onRegister: () -> Unit) 
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = onApps, modifier = Modifier.fillMaxWidth()) { Text("التطبيقات") }
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedButton(onClick = onLogin, modifier = Modifier.fillMaxWidth()) { Text("دخول") }
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedButton(onClick = onRegister, modifier = Modifier.fillMaxWidth()) { Text("تسجيل") }
     }
 }
@@ -68,9 +71,13 @@ fun LoginScreen(onSuccess: () -> Unit, onRegister: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
 
-    Column(Modifier = Modifier.fillMaxSize().padding(24.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+    ) {
         Text("تسجيل الدخول", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -78,7 +85,7 @@ fun LoginScreen(onSuccess: () -> Unit, onRegister: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -86,11 +93,11 @@ fun LoginScreen(onSuccess: () -> Unit, onRegister: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
-        error?.let {
-            Spacer(Modifier.height(8.dp))
-            Text(it, color = MaterialTheme.colorScheme.error)
+        error?.let { msg ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(msg, color = MaterialTheme.colorScheme.error)
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
                 loading = true
@@ -99,7 +106,7 @@ fun LoginScreen(onSuccess: () -> Unit, onRegister: () -> Unit) {
                     try {
                         val res = ApiClient.api.login(AuthRequest(email, password))
                         val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
-                        val json = moshi.adapter(com.onehub.app.data.AuthUser::class.java).toJson(res.user)
+                        val json = moshi.adapter(AuthUser::class.java).toJson(res.user)
                         SessionStore(context).saveSession(res.accessToken, res.refreshToken, json)
                         onSuccess()
                     } catch (e: Exception) {
@@ -114,7 +121,7 @@ fun LoginScreen(onSuccess: () -> Unit, onRegister: () -> Unit) {
         ) {
             Text(if (loading) "..." else "دخول")
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedButton(onClick = onRegister, modifier = Modifier.fillMaxWidth()) {
             Text("إنشاء حساب")
         }
@@ -131,19 +138,38 @@ fun RegisterScreen(onSuccess: () -> Unit, onLogin: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
 
-    Column(Modifier = Modifier.fillMaxSize().padding(24.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+    ) {
         Text("إنشاء حساب", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(16.dp))
-        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("الاسم") }, modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.height(8.dp))
-        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("البريد") }, modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.height(8.dp))
-        OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("كلمة المرور") }, modifier = Modifier.fillMaxWidth())
-        error?.let {
-            Spacer(Modifier.height(8.dp))
-            Text(it, color = MaterialTheme.colorScheme.error)
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("الاسم") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("البريد") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("كلمة المرور") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        error?.let { msg ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(msg, color = MaterialTheme.colorScheme.error)
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
                 loading = true
@@ -154,7 +180,7 @@ fun RegisterScreen(onSuccess: () -> Unit, onLogin: () -> Unit) {
                             AuthRequest(email, password, displayName = name, preferredLocale = "ar"),
                         )
                         val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
-                        val json = moshi.adapter(com.onehub.app.data.AuthUser::class.java).toJson(res.user)
+                        val json = moshi.adapter(AuthUser::class.java).toJson(res.user)
                         SessionStore(context).saveSession(res.accessToken, res.refreshToken, json)
                         onSuccess()
                     } catch (e: Exception) {
@@ -169,7 +195,7 @@ fun RegisterScreen(onSuccess: () -> Unit, onLogin: () -> Unit) {
         ) {
             Text(if (loading) "..." else "تسجيل")
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedButton(onClick = onLogin, modifier = Modifier.fillMaxWidth()) { Text("لدي حساب") }
     }
 }
@@ -192,27 +218,46 @@ fun AppsScreen(onAppClick: (String) -> Unit) {
         }
     }
 
-    Column(Modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+    ) {
         Text("التطبيقات", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         when {
             loading -> {
-                Column(Modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
                     CircularProgressIndicator()
                 }
             }
             error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
             items.isEmpty() -> Text("لا توجد تطبيقات. شغّل seed من الـ Backend.")
             else -> {
-                LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyColumn(
+                    contentPadding = PaddingValues(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     items(items, key = { it.appId }) { app ->
                         Card(
-                            modifier = Modifier.fillMaxWidth().clickable { onAppClick(app.appId) },
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onAppClick(app.appId) },
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                            ),
                         ) {
-                            Column(Modifier = Modifier.padding(16.dp)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
                                 Text(app.displayNameAr, style = MaterialTheme.typography.titleMedium)
-                                Text(app.appId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    app.appId,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                                 Text(app.status, style = MaterialTheme.typography.labelMedium)
                             }
                         }
@@ -240,18 +285,22 @@ fun AppDetailScreen(appId: String, onBack: () -> Unit) {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+    ) {
         OutlinedButton(onClick = onBack) { Text("رجوع") }
-        Spacer(Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         when {
             loading -> CircularProgressIndicator()
             error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
             app != null -> {
                 Text(app!!.displayNameAr, style = MaterialTheme.typography.headlineSmall)
                 Text(app!!.displayNameEn, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(app!!.descriptionAr ?: app!!.descriptionEn ?: "—")
-                Spacer(Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text("الحالة: ${app!!.status}")
                 Text("المحول: ${app!!.adapterType}")
             }
