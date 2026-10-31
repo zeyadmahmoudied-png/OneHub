@@ -7,12 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum PlatformRole {
+  USER
+  DEVELOPER
+  ADMIN
+}
+
 model User {
   id               String         @id @default(uuid())
   email            String         @unique
   passwordHash     String         @map("password_hash")
   displayName      String         @map("display_name")
   preferredLocale  String         @default("ar") @map("preferred_locale")
+  role             PlatformRole   @default(USER)
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
   refreshTokens    RefreshToken[]
@@ -30,6 +37,7 @@ model RefreshToken {
   createdAt DateTime  @default(now()) @map("created_at")
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userHash])
   @@map("refresh_tokens")
 }
 
@@ -52,6 +60,7 @@ model App {
   updatedAt      DateTime @updatedAt @map("updated_at")
   versions       AppVersion[]
 
+  @@index([status])
   @@map("apps")
 }
 
