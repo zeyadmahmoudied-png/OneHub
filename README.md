@@ -39,7 +39,7 @@ docker compose up -d
 ```bash
 cd backend
 cp .env.example .env   # set JWT secrets (≥32 chars)
-npm ci                 # or npm install if lock missing
+npm ci
 npx prisma generate
 npx prisma migrate deploy
 npm run prisma:seed
@@ -68,7 +68,7 @@ chmod +x gradlew
 # APK: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Or open `apps/android` in Android Studio and Run. Emulator reaches host API at `10.0.2.2:3000`.
+Gradle Wrapper **8.11.1** is committed under `apps/android/`. Emulator reaches host API at `10.0.2.2:3000`.
 
 ### 5. SDK
 
@@ -86,17 +86,17 @@ cd backend && npm test
 cd packages/sdk && npm test
 ```
 
-CI: `.github/workflows/ci.yml` (Backend + Postgres, Web, SDK, Android Debug APK artifact).
+CI: `.github/workflows/ci.yml` — Backend + Postgres, Web, SDK, Android Debug APK (`onehub-debug-apk`).
 
 ## Repository structure
 
 ```
 OneHub/
-├── apps/android/     # Kotlin + Compose
+├── apps/android/     # Kotlin + Compose (Gradle Wrapper 8.11.1)
 ├── apps/web/         # Next.js 15
 ├── backend/          # NestJS + Prisma
 ├── packages/sdk/     # Integration SDK
-├── docs/             # Architecture, roadmap, security
+├── docs/             # Architecture, roadmap, security, Phase 1 closeout
 ├── docker-compose.yml
 └── .github/workflows/ci.yml
 ```
@@ -108,6 +108,7 @@ OneHub/
 - [Database schema](docs/DATABASE_SCHEMA.md)
 - [Security](docs/SECURITY.md)
 - [Phase 1 status](docs/PHASE_1_STATUS.md)
+- [Phase 1 closeout](docs/PHASE_1_CLOSEOUT.md)
 
 ## License
 
