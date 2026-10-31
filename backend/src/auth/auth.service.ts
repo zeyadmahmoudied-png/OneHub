@@ -20,6 +20,18 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
+  private accessSecret(): string {
+    const secret = this.config.get<string>('JWT_ACCESS_SECRET');
+    if (!secret || secret.length < 32) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('JWT_ACCESS_SECRET must be set (min 32 chars) in production');
+      }
+      // Dev-only fallback — never use in production
+      return 'dev-only-access-secret-min-32-chars!!';
+    }
+    return secret;
+  }
+
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }
@@ -33,7 +45,7 @@ export class AuthService {
   }) {
     const payload = { sub: user.id, email: user.email, role: user.role };
     const accessToken = await this.jwt.signAsync(payload, {
-      secret: this.config.get<string>('JWT_ACCESS_SECRET') || 'dev-access-secret-change-me-32chars',
+      secret: this.accessSecret(),
       expiresIn: '15m',
     });
 
@@ -135,7 +147,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    // rotate: revoke old token
     await this.prisma.refreshToken.update({
       where: { id: stored.id },
       data: { revokedAt: new Date() },
