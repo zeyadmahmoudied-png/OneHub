@@ -37,7 +37,8 @@ model RefreshToken {
   createdAt DateTime  @default(now()) @map("created_at")
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userHash])
+  @@index([userId])
+  @@index([tokenHash])
   @@map("refresh_tokens")
 }
 
