@@ -1,0 +1,61 @@
+name: Bootstrap foundation files
+
+on:
+  push:
+    paths:
+      - '.github/workflows/bootstrap-foundation-files.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  commit-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install official Gradle wrapper jar (8.11.1)
+        run: |
+          set -euo pipefail
+          mkdir -p apps/android/gradle/wrapper
+          curl -fsSL -o apps/android/gradle/wrapper/gradle-wrapper.jar \
+            https://github.com/gradle/gradle/raw/v8.11.1/gradle/wrapper/gradle-wrapper.jar
+          # verify ZIP magic
+          python3 -c "p=open('apps/android/gradle/wrapper/gradle-wrapper.jar','rb').read(4); assert p==b'PK\\x03\\x04', p"
+          test -f apps/android/gradlew
+          test -f apps/android/gradlew.bat
+          test -f apps/android/gradle/wrapper/gradle-wrapper.properties
+          chmod +x apps/android/gradlew
+
+      - name: Generate package-lock files from package.json (no version bumps)
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --registry=https://registry.npmjs.org/ --no-audit --no-fund --prefix backend
+          npm install --package-lock-only --registry=https://registry.npmjs.org/ --no-audit --no-fund --prefix apps/web
+          test -f backend/package-lock.json
+          test -f apps/web/package-lock.json
+          test -f packages/sdk/package-lock.json
+          grep -q registry.npmjs.org backend/package-lock.json
+          grep -q registry.npmjs.org apps/web/package-lock.json
+
+      - name: Commit and push if needed
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/android/gradle/wrapper/gradle-wrapper.jar \
+                  backend/package-lock.json \
+                  apps/web/package-lock.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: commit gradle-wrapper.jar and npm lockfiles (official sources)"
+            git push
+          fi
