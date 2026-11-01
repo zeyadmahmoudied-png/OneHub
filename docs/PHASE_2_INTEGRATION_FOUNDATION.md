@@ -1,77 +1,78 @@
-# Phase 2 — Integration Foundation
+# Phase 2 — Integration Foundation (closeout)
 
 **Date:** 2026-11-01  
-**Scope decision:** Super App currently targets **three** apps only:
+**CI green:** https://github.com/zeyadmahmoudied-png/OneHub/actions/runs/41288965460
 
-1. My Plan  
-2. PhotoCleaner  
-3. Dar Al Bayan  
+## Product scope (owner decision)
 
-ZOZ Creator / YouTube Control Center are **deferred** and removed from active slots.
+Active Super App targets:
 
-**No real app source was merged in this phase.**
+1. **My Plan** — source archive received (`MyPlan-v2.23-polish-source.zip`)
+2. **PhotoCleaner** — GitHub source available
+3. **Dar Al Bayan** — UI pack archive received (`dar-al-bayan-ui-redesign-source.zip`)
 
-## Architecture after Phase 2
+Deferred: ZOZ Creator, YouTube Control Center.
+
+**No real app source was merged into feature modules in Phase 2.**
+
+See `docs/SOURCE_INVENTORY_3APPS.md`.
+
+## Architecture
 
 ```
 apps/android/
-  app/                 # shell: MainActivity, Foundation API screens
-  core/                # theme, FeatureSlot contracts
+  app/                 # shell: MainActivity, Foundation API UI, Access UI
+  core/                # OneHubTheme, FeatureSlot contracts (3 apps)
   navigation/          # Routes + OneHubNavHost (internal only)
-  accesscontrol/       # Owner, codes, grants, engine + unit tests
+  accesscontrol/       # pure Kotlin JVM: engine + repo + unit tests
   features/
-    slots/             # honest PENDING_SOURCE UI for the three apps
+    slots/             # honest PENDING_SOURCE list/detail screens
 ```
 
-```
-settings.gradle.kts includes:
-  :app :core :navigation :accesscontrol :features:slots
-```
-
-## Access Control Foundation
+## Access Control
 
 | Capability | Status |
 |------------|--------|
-| Owner provision (local password hash + salt) | Implemented (engine + in-memory repo) |
-| Permission definitions (hub + feature capabilities) | Implemented |
-| Issue codes (hashed storage, max uses, validity window) | Implemented |
-| Activate / bind to user | Implemented |
-| Expire grants automatically | Implemented |
-| Revoke / renew | Implemented |
-| Audit log (local list) | Implemented |
-| Block ADMIN via normal code | Implemented + tested |
-| Backend-ready `AccessRepository` interface | Implemented |
-| Persistent DataStore backend | **Not yet** (in-memory for Phase 2 verification) |
-| Server-side enforcement | **Documented as required later** |
+| Owner provision (local SHA-256 + salt) | Done |
+| Capability permissions (hub + feature.*) | Done |
+| Issue / activate / revoke / renew codes | Done |
+| Max uses + validity window | Done |
+| Block ADMIN via code | Done + tested |
+| Local audit events | Done |
+| `AccessRepository` for future Backend | Done |
+| In-memory store for Phase 2 verification | Done |
+| DataStore persistence | Not yet |
+| Server-side enforcement | Required later (documented in UI) |
 
-Security note (shown in UI): local AC is not a substitute for server verification against a modified client.
+**Unit tests:** 7 JVM tests in `:accesscontrol:test` (local + CI).
 
 ## Navigation
 
-- Internal Compose Navigation only (no external app Intents).
-- Routes for hub registry, feature slots, owner setup/login/admin, redeem code.
-- Feature detail keeps single-top style navigation back to shell.
+Internal Compose navigation only. Routes cover hub registry, feature slots, owner setup/login/admin, redeem code.
 
-## Source availability notes
+## CI results (run 41288965460)
 
-| App | GitHub | Grok Library (this agent environment) |
-|-----|--------|----------------------------------------|
-| PhotoCleaner | Available | N/A |
-| My Plan | Empty / private candidates | **Not found** in sandbox paths |
-| Dar Al Bayan | No public repo under owner accounts | **Not found** in sandbox paths |
+| Job | Result |
+|-----|--------|
+| Backend + Postgres | Success |
+| Web typecheck/build | Success |
+| SDK build/tests | Success |
+| Access control JVM tests | Success |
+| assembleDebug | Success |
+| assembleRelease | Success |
 
-Phase 3 will start with **PhotoCleaner** (confirmed GitHub source). My Plan / Dar Al Bayan require the owner to surface library archives into a reachable path or repo before merge.
+Artifacts:
 
-## Explicit non-goals this phase
+- `onehub-debug-apk` — 11.1 MB
+- `onehub-release-apk` — 7.62 MB
 
-- No PhotoCleaner / My Plan / Dar Al Bayan code copied into features
-- No claim of integrated app functionality
-- No Backend deploy requirement
-- No changes to Nest/Web/SDK contracts beyond Android CI test steps
+## Explicit non-goals completed as non-goals
 
-## CI expectations
+- No PhotoCleaner / My Plan / Dar Al Bayan code inside `features/*`
+- No external app Intents
+- No Backend deploy
+- No Phase 3 merge started
 
-- `:accesscontrol:testDebugUnitTest`
-- `:app:assembleDebug`
-- `:app:assembleRelease`
-- Existing backend / web / sdk jobs unchanged
+## Next (after review)
+
+Phase 3: integrate **PhotoCleaner** first as a real feature module, then My Plan (Java/Views) and Dar Al Bayan (Capacitor/Web) with isolation strategies from the inventory doc.
