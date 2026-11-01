@@ -99,9 +99,10 @@ class AccessEngineTest {
     @Test
     fun usageLimitEnforced() {
         val user = LocalUser("u1", "U", false, emptyMap())
-        val issued = engine.issueCodeWithAudit(
+        val pair = engine.issueCodeWithAudit(
             "o", listOf(Permission.HUB_BASIC.id), 0, null, 1, "once", 1,
         ).getOrThrow()
+        val issued = pair.first
         val first = engine.activateCode(issued.plaintextOnce, listOf(issued.code), user, 2).getOrThrow()
         val second = engine.activateCode(
             issued.plaintextOnce,
