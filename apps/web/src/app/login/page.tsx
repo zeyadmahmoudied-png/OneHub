@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { login } from '@/lib/api';
+import { saveSession } from '@/lib/session';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,9 +19,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await login(email, password);
-      localStorage.setItem('onehub_access', res.accessToken);
-      localStorage.setItem('onehub_refresh', res.refreshToken);
-      localStorage.setItem('onehub_user', JSON.stringify(res.user));
+      saveSession(res);
       router.push('/apps');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
