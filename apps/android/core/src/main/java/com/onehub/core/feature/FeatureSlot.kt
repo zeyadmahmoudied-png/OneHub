@@ -2,7 +2,13 @@ package com.onehub.core.feature
 
 /**
  * Descriptor for an embeddable app inside OneHub.
- * Phase 2 only registers slots; Phase 3+ attach real Compose entry points.
+ * Phase 2 registers slots only — no app source is claimed integrated.
+ *
+ * Current product scope (owner decision 2026-11-01):
+ * 1. My Plan
+ * 2. PhotoCleaner
+ * 3. Dar Al Bayan
+ * Other apps (ZOZ, YouTube CC, …) are deferred and not listed here.
  */
 data class FeatureSlot(
     val id: String,
@@ -26,39 +32,25 @@ enum class FeatureIntegrationStatus {
 object KnownFeatureSlots {
     val all: List<FeatureSlot> = listOf(
         FeatureSlot(
-            id = "photocleaner",
-            titleAr = "منظف الصور",
-            titleEn = "PhotoCleaner",
-            status = FeatureIntegrationStatus.PENDING_SOURCE,
-            summaryAr = "سيُدمج في المرحلة 3 من سورس PhotoCleaner المتاح.",
-        ),
-        FeatureSlot(
-            id = "zozcreator",
-            titleAr = "ZOZ Creator",
-            titleEn = "ZOZ Creator",
-            status = FeatureIntegrationStatus.PENDING_SOURCE,
-            summaryAr = "سورس متاح (خاص). الدمج بعد استقرار الأساس.",
-        ),
-        FeatureSlot(
-            id = "youtubecc",
-            titleAr = "YouTube Control Center",
-            titleEn = "YouTube Control Center",
-            status = FeatureIntegrationStatus.PENDING_SOURCE,
-            summaryAr = "سورس متاح. يحتاج مواءمة Compose ومفتاح API.",
-        ),
-        FeatureSlot(
             id = "myplan",
             titleAr = "خطتي",
             titleEn = "My Plan",
             status = FeatureIntegrationStatus.PENDING_SOURCE,
-            summaryAr = "السورس غير متاح بعد — بانتظار المستودع.",
+            summaryAr = "ضمن النطاق. السورس يُراجع من مكتبة الملفات عند توفره في بيئة الدمج؛ لم يُدمج بعد.",
+        ),
+        FeatureSlot(
+            id = "photocleaner",
+            titleAr = "منظف الصور",
+            titleEn = "PhotoCleaner",
+            status = FeatureIntegrationStatus.PENDING_SOURCE,
+            summaryAr = "سورس متاح على GitHub. مرشّح الدمج الأول بعد اكتمال Integration Foundation.",
         ),
         FeatureSlot(
             id = "daralbayan",
             titleAr = "دار البيان",
             titleEn = "Dar Al Bayan",
             status = FeatureIntegrationStatus.PENDING_SOURCE,
-            summaryAr = "السورس غير متاح بعد — بانتظار الرابط.",
+            summaryAr = "ضمن النطاق. السورس يُراجع من مكتبة الملفات عند توفره؛ لم يُدمج بعد.",
         ),
     )
 }
