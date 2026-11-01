@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { register } from '@/lib/api';
+import { saveSession } from '@/lib/session';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -24,9 +25,7 @@ export default function RegisterPage() {
         displayName,
         preferredLocale: 'ar',
       });
-      localStorage.setItem('onehub_access', res.accessToken);
-      localStorage.setItem('onehub_refresh', res.refreshToken);
-      localStorage.setItem('onehub_user', JSON.stringify(res.user));
+      saveSession(res);
       router.push('/apps');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
