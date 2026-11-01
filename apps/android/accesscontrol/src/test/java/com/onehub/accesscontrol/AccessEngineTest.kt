@@ -38,12 +38,12 @@ class AccessEngineTest {
     @Test
     fun activateAndExpire() = runBlocking {
         val repo = InMemoryAccessRepository(engine)
-        val now = 1_000_000L
+        val now = System.currentTimeMillis()
         repo.provisionOwner("Owner", "password123", now).getOrThrow()
         val issued = repo.issueCode(
             permissionIds = listOf(Permission.HUB_BASIC.id, Permission.WORKSPACE.id),
-            validFromEpochMs = now,
-            validToEpochMs = now + 10_000,
+            validFromEpochMs = now - 1_000,
+            validToEpochMs = now + 60_000,
             maxUses = 2,
             label = "trial",
             nowEpochMs = now,
@@ -56,17 +56,19 @@ class AccessEngineTest {
         assertTrue(repo.require(Permission.WORKSPACE, now))
         assertFalse(repo.require(Permission.ADMIN_TOOLS, now))
 
-        assertFalse(repo.require(Permission.HUB_BASIC, now + 20_000))
+        // Engine-level expiry check (independent of wall-clock strip)
+        val alice = repo.currentUser()!!
+        assertFalse(engine.hasPermission(alice, Permission.HUB_BASIC, now + 120_000))
     }
 
     @Test
     fun revokeBlocksActivation() = runBlocking {
         val repo = InMemoryAccessRepository(engine)
-        val now = 5_000L
+        val now = System.currentTimeMillis()
         repo.provisionOwner("Owner", "password123", now).getOrThrow()
         val issued = repo.issueCode(
             listOf(Permission.HUB_BASIC.id),
-            now,
+            now - 1_000,
             now + 1_000_000,
             5,
             "x",
@@ -81,19 +83,20 @@ class AccessEngineTest {
     @Test
     fun renewExtendsValidity() = runBlocking {
         val repo = InMemoryAccessRepository(engine)
-        val now = 10_000L
+        val now = System.currentTimeMillis()
         repo.provisionOwner("Owner", "password123", now).getOrThrow()
         val issued = repo.issueCode(
             listOf(Permission.DEVELOPER_TOOLS.id),
-            now,
+            now - 1_000,
             now + 1_000,
             null,
             "dev",
             now,
         ).getOrThrow()
-        repo.renewCode(issued.code.id, now + 50_000, now).getOrThrow()
+        val until = now + 50_000
+        repo.renewCode(issued.code.id, until, now).getOrThrow()
         val codes = repo.listCodes()
-        assertEquals(now + 50_000, codes.first().validToEpochMs)
+        assertEquals(until, codes.first().validToEpochMs)
     }
 
     @Test
