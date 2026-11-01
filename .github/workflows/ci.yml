@@ -119,6 +119,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Access control JVM unit tests
+        run: |
+          set -euo pipefail
+          ./gradlew :accesscontrol:test --no-daemon --stacktrace --info 2>&1 | tee /tmp/accesscontrol-test.log
+          # Fail the step if tests failed (gradle exit already does)
+
       - name: Install Android SDK
         run: |
           set -euo pipefail
@@ -137,9 +143,6 @@ jobs:
 
       - name: Write local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
-
-      - name: Access control unit tests
-        run: ./gradlew :accesscontrol:testDebugUnitTest --no-daemon --stacktrace
 
       - name: Assemble Debug APK
         run: |
@@ -166,3 +169,11 @@ jobs:
           name: onehub-release-apk
           path: apps/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+      - name: Upload accesscontrol test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accesscontrol-test-log
+          path: /tmp/accesscontrol-test.log
+          if-no-files-found: ignore
