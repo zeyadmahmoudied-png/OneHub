@@ -11,14 +11,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.onehub.accesscontrol.repo.InMemoryAccessRepository
-import com.onehub.accesscontrol.ui.OwnerAdminScreen
-import com.onehub.accesscontrol.ui.OwnerLoginScreen
-import com.onehub.accesscontrol.ui.OwnerSetupScreen
-import com.onehub.accesscontrol.ui.RedeemCodeScreen
 import com.onehub.app.ui.AppDetailScreen
 import com.onehub.app.ui.AppsScreen
 import com.onehub.app.ui.HomeScreen
 import com.onehub.app.ui.LoginScreen
+import com.onehub.app.ui.OwnerAdminScreen
+import com.onehub.app.ui.OwnerLoginScreen
+import com.onehub.app.ui.OwnerSetupScreen
+import com.onehub.app.ui.RedeemCodeScreen
 import com.onehub.app.ui.RegisterScreen
 import com.onehub.core.design.OneHubTheme
 import com.onehub.navigation.OneHubNavHost
@@ -31,8 +31,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             OneHubTheme {
                 val nav = rememberNavController()
-                // Phase 2: in-memory AC for foundation verification.
-                // Persistence + Backend adapter land when server enforcement is required.
                 val accessRepo = remember { InMemoryAccessRepository() }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { inner ->
