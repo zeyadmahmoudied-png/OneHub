@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -45,8 +47,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onApps: () -> Unit,
+    onFeatureSlots: () -> Unit,
     onLogin: () -> Unit,
     onRegister: () -> Unit,
+    onOwnerSetup: () -> Unit,
+    onOwnerLogin: () -> Unit,
+    onRedeem: () -> Unit,
+    onAdmin: () -> Unit,
     onLoggedOut: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -71,12 +78,13 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
     ) {
         Text("OneHub", style = MaterialTheme.typography.headlineLarge)
         Text(
-            "منصة موحدة لإدارة التطبيقات المستقلة",
+            "منصة موحدة — النطاق الحالي: خطتي · منظف الصور · دار البيان",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -89,12 +97,34 @@ fun HomeScreen(
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onApps, modifier = Modifier.fillMaxWidth()) { Text("التطبيقات") }
+        Button(onClick = onFeatureSlots, modifier = Modifier.fillMaxWidth()) {
+            Text("التطبيقات المدمجة (Slots)")
+        }
         Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = onApps, modifier = Modifier.fillMaxWidth()) {
+            Text("سجل التطبيقات (Backend Registry)")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedButton(onClick = onOwnerSetup, modifier = Modifier.fillMaxWidth()) {
+            Text("إعداد المالك")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedButton(onClick = onOwnerLogin, modifier = Modifier.fillMaxWidth()) {
+            Text("دخول المالك")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedButton(onClick = onAdmin, modifier = Modifier.fillMaxWidth()) {
+            Text("لوحة المالك / الأكواد")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedButton(onClick = onRedeem, modifier = Modifier.fillMaxWidth()) {
+            Text("تفعيل كود صلاحية")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
         if (!loggedIn) {
-            OutlinedButton(onClick = onLogin, modifier = Modifier.fillMaxWidth()) { Text("دخول") }
+            OutlinedButton(onClick = onLogin, modifier = Modifier.fillMaxWidth()) { Text("دخول المنصة (API)") }
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(onClick = onRegister, modifier = Modifier.fillMaxWidth()) { Text("تسجيل") }
+            OutlinedButton(onClick = onRegister, modifier = Modifier.fillMaxWidth()) { Text("تسجيل منصة (API)") }
         } else {
             OutlinedButton(
                 onClick = {
@@ -106,7 +136,6 @@ fun HomeScreen(
                                 ApiClient.api.logout(LogoutRequest(refresh))
                             }
                         } catch (_: Exception) {
-                            // still clear local session
                         }
                         store.clear()
                         loggedIn = false
@@ -114,7 +143,7 @@ fun HomeScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("تسجيل الخروج") }
+            ) { Text("تسجيل الخروج من API") }
         }
     }
 }
@@ -270,7 +299,6 @@ fun AppsScreen(onAppClick: (String) -> Unit) {
             loading = true
             error = null
             try {
-                // Best-effort token refresh if we have a session
                 val store = SessionStore(context)
                 val refresh = store.getRefreshToken()
                 if (refresh != null) {
@@ -280,7 +308,6 @@ fun AppsScreen(onAppClick: (String) -> Unit) {
                         val json = moshi.adapter(AuthUser::class.java).toJson(res.user)
                         store.saveSession(res.accessToken, res.refreshToken, json)
                     } catch (_: Exception) {
-                        // public apps list still works without auth
                     }
                 }
                 items = ApiClient.api.listApps().items
