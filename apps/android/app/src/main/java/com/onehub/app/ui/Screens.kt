@@ -30,17 +30,44 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.onehub.app.BuildConfig
 import com.onehub.app.data.ApiClient
 import com.onehub.app.data.AppItem
 import com.onehub.app.data.AuthRequest
 import com.onehub.app.data.AuthUser
+import com.onehub.app.data.LogoutRequest
+import com.onehub.app.data.RefreshRequest
 import com.onehub.app.data.SessionStore
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.launch
 
 @Composable
-fun HomeScreen(onApps: () -> Unit, onLogin: () -> Unit, onRegister: () -> Unit) {
+fun HomeScreen(
+    onApps: () -> Unit,
+    onLogin: () -> Unit,
+    onRegister: () -> Unit,
+    onLoggedOut: () -> Unit = {},
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var serverStatus by remember { mutableStateOf<String?>(null) }
+    var loggedIn by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        loggedIn = SessionStore(context).getAccessToken() != null
+        if (!ApiClient.baseUrlConfigured) {
+            serverStatus = "API_BASE_URL فارغ — Backend غير مضبوط لهذا البناء."
+            return@LaunchedEffect
+        }
+        try {
+            ApiClient.api.health()
+            serverStatus = "الخادم متصل (${BuildConfig.API_BASE_URL})"
+        } catch (e: Exception) {
+            serverStatus = ApiClient.friendlyNetworkError(e)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -53,12 +80,42 @@ fun HomeScreen(onApps: () -> Unit, onLogin: () -> Unit, onRegister: () -> Unit) 
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(modifier = Modifier.height(12.dp))
+        serverStatus?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = onApps, modifier = Modifier.fillMaxWidth()) { Text("التطبيقات") }
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedButton(onClick = onLogin, modifier = Modifier.fillMaxWidth()) { Text("دخول") }
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedButton(onClick = onRegister, modifier = Modifier.fillMaxWidth()) { Text("تسجيل") }
+        if (!loggedIn) {
+            OutlinedButton(onClick = onLogin, modifier = Modifier.fillMaxWidth()) { Text("دخول") }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(onClick = onRegister, modifier = Modifier.fillMaxWidth()) { Text("تسجيل") }
+        } else {
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        val store = SessionStore(context)
+                        val refresh = store.getRefreshToken()
+                        try {
+                            if (refresh != null) {
+                                ApiClient.api.logout(LogoutRequest(refresh))
+                            }
+                        } catch (_: Exception) {
+                            // still clear local session
+                        }
+                        store.clear()
+                        loggedIn = false
+                        onLoggedOut()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("تسجيل الخروج") }
+        }
     }
 }
 
@@ -93,9 +150,9 @@ fun LoginScreen(onSuccess: () -> Unit, onRegister: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
-        error?.let { msg ->
+        error?.let {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(msg, color = MaterialTheme.colorScheme.error)
+            Text(it, color = MaterialTheme.colorScheme.error)
         }
         Spacer(modifier = Modifier.height(16.dp))
         Button(
@@ -110,7 +167,7 @@ fun LoginScreen(onSuccess: () -> Unit, onRegister: () -> Unit) {
                         SessionStore(context).saveSession(res.accessToken, res.refreshToken, json)
                         onSuccess()
                     } catch (e: Exception) {
-                        error = e.message ?: "فشل الدخول"
+                        error = ApiClient.friendlyNetworkError(e)
                     } finally {
                         loading = false
                     }
@@ -165,9 +222,9 @@ fun RegisterScreen(onSuccess: () -> Unit, onLogin: () -> Unit) {
             label = { Text("كلمة المرور") },
             modifier = Modifier.fillMaxWidth(),
         )
-        error?.let { msg ->
+        error?.let {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(msg, color = MaterialTheme.colorScheme.error)
+            Text(it, color = MaterialTheme.colorScheme.error)
         }
         Spacer(modifier = Modifier.height(16.dp))
         Button(
@@ -184,7 +241,7 @@ fun RegisterScreen(onSuccess: () -> Unit, onLogin: () -> Unit) {
                         SessionStore(context).saveSession(res.accessToken, res.refreshToken, json)
                         onSuccess()
                     } catch (e: Exception) {
-                        error = e.message ?: "فشل التسجيل"
+                        error = ApiClient.friendlyNetworkError(e)
                     } finally {
                         loading = false
                     }
@@ -202,21 +259,40 @@ fun RegisterScreen(onSuccess: () -> Unit, onLogin: () -> Unit) {
 
 @Composable
 fun AppsScreen(onAppClick: (String) -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var items by remember { mutableStateOf<List<AppItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
-        loading = true
-        error = null
-        try {
-            items = ApiClient.api.listApps().items
-        } catch (e: Exception) {
-            error = e.message ?: "تعذر التحميل"
-        } finally {
-            loading = false
+    fun load() {
+        scope.launch {
+            loading = true
+            error = null
+            try {
+                // Best-effort token refresh if we have a session
+                val store = SessionStore(context)
+                val refresh = store.getRefreshToken()
+                if (refresh != null) {
+                    try {
+                        val res = ApiClient.api.refresh(RefreshRequest(refresh))
+                        val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+                        val json = moshi.adapter(AuthUser::class.java).toJson(res.user)
+                        store.saveSession(res.accessToken, res.refreshToken, json)
+                    } catch (_: Exception) {
+                        // public apps list still works without auth
+                    }
+                }
+                items = ApiClient.api.listApps().items
+            } catch (e: Exception) {
+                error = ApiClient.friendlyNetworkError(e)
+            } finally {
+                loading = false
+            }
         }
     }
+
+    LaunchedEffect(Unit) { load() }
 
     Column(
         modifier = Modifier
@@ -235,7 +311,11 @@ fun AppsScreen(onAppClick: (String) -> Unit) {
                     CircularProgressIndicator()
                 }
             }
-            error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
+            error != null -> {
+                Text(error!!, color = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = { load() }) { Text("إعادة المحاولة") }
+            }
             items.isEmpty() -> Text("لا توجد تطبيقات. شغّل seed من الـ Backend.")
             else -> {
                 LazyColumn(
@@ -279,7 +359,7 @@ fun AppDetailScreen(appId: String, onBack: () -> Unit) {
         try {
             app = ApiClient.api.getApp(appId)
         } catch (e: Exception) {
-            error = e.message ?: "غير موجود"
+            error = ApiClient.friendlyNetworkError(e)
         } finally {
             loading = false
         }
