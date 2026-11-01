@@ -4,11 +4,10 @@ package com.onehub.core.feature
  * Descriptor for an embeddable app inside OneHub.
  * Phase 2 registers slots only — no app source is claimed integrated.
  *
- * Current product scope (owner decision 2026-11-01):
+ * Current product scope:
  * 1. My Plan
  * 2. PhotoCleaner
  * 3. Dar Al Bayan
- * Other apps (ZOZ, YouTube CC, …) are deferred and not listed here.
  */
 data class FeatureSlot(
     val id: String,
@@ -19,13 +18,8 @@ data class FeatureSlot(
 )
 
 enum class FeatureIntegrationStatus {
-    /** Real module not integrated yet — UI must not claim functionality. */
     PENDING_SOURCE,
-
-    /** Module present, core flows working. */
     INTEGRATED,
-
-    /** Partial integration. */
     PARTIAL,
 }
 
@@ -36,21 +30,21 @@ object KnownFeatureSlots {
             titleAr = "خطتي",
             titleEn = "My Plan",
             status = FeatureIntegrationStatus.PENDING_SOURCE,
-            summaryAr = "ضمن النطاق. السورس يُراجع من مكتبة الملفات عند توفره في بيئة الدمج؛ لم يُدمج بعد.",
+            summaryAr = "سورس v2.23 (Java/Views + Supabase) مُستلم كأرشيف. لم يُدمج بعد.",
         ),
         FeatureSlot(
             id = "photocleaner",
             titleAr = "منظف الصور",
             titleEn = "PhotoCleaner",
             status = FeatureIntegrationStatus.PENDING_SOURCE,
-            summaryAr = "سورس متاح على GitHub. مرشّح الدمج الأول بعد اكتمال Integration Foundation.",
+            summaryAr = "سورس GitHub متاح. مرشّح الدمج الأول بعد استقرار المرحلة 2.",
         ),
         FeatureSlot(
             id = "daralbayan",
             titleAr = "دار البيان",
             titleEn = "Dar Al Bayan",
             status = FeatureIntegrationStatus.PENDING_SOURCE,
-            summaryAr = "ضمن النطاق. السورس يُراجع من مكتبة الملفات عند توفره؛ لم يُدمج بعد.",
+            summaryAr = "أرشيف UI (React + Capacitor) مُستلم. لم يُدمج بعد.",
         ),
     )
 }
