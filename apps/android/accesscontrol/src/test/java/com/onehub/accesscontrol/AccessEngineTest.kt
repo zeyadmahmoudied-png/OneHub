@@ -15,10 +15,10 @@ class AccessEngineTest {
 
     @Test
     fun hashIsStableAndNotPlaintext() {
-        val h = engine.hashCode("OH-TEST-CODE")
+        val h = engine.hashCodeValue("OH-TEST-CODE")
         assertEquals(64, h.length)
         assertFalse(h.contains("TEST"))
-        assertEquals(h, engine.hashCode("OH-TEST-CODE"))
+        assertEquals(h, engine.hashCodeValue("OH-TEST-CODE"))
     }
 
     @Test
@@ -56,7 +56,6 @@ class AccessEngineTest {
         assertTrue(repo.require(Permission.WORKSPACE, now))
         assertFalse(repo.require(Permission.ADMIN_TOOLS, now))
 
-        // After expiry
         assertFalse(repo.require(Permission.HUB_BASIC, now + 20_000))
     }
 
