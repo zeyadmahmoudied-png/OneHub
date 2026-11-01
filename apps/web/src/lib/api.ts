@@ -51,6 +51,32 @@ async function parseError(res: Response): Promise<string> {
   }
 }
 
+function networkHint(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (
+    msg.includes('Failed to fetch') ||
+    msg.includes('NetworkError') ||
+    msg.includes('Load failed')
+  ) {
+    return `تعذر الاتصال بالخادم (${API_BASE}). تأكد أن Backend يعمل محليًا أو أن NEXT_PUBLIC_API_URL صحيح.`;
+  }
+  return msg;
+}
+
+async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (err) {
+    throw new Error(networkHint(err));
+  }
+}
+
+export async function checkHealth(): Promise<{ status: string }> {
+  const res = await safeFetch(`${API_BASE}/health`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
 export async function fetchApps(params?: {
   q?: string;
   status?: string;
@@ -59,7 +85,7 @@ export async function fetchApps(params?: {
   if (params?.q) sp.set('q', params.q);
   if (params?.status) sp.set('status', params.status);
   const qs = sp.toString();
-  const res = await fetch(`${API_BASE}/apps${qs ? `?${qs}` : ''}`, {
+  const res = await safeFetch(`${API_BASE}/apps${qs ? `?${qs}` : ''}`, {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(await parseError(res));
@@ -67,7 +93,7 @@ export async function fetchApps(params?: {
 }
 
 export async function fetchApp(appId: string): Promise<AppItem> {
-  const res = await fetch(`${API_BASE}/apps/${encodeURIComponent(appId)}`, {
+  const res = await safeFetch(`${API_BASE}/apps/${encodeURIComponent(appId)}`, {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(await parseError(res));
@@ -75,7 +101,7 @@ export async function fetchApp(appId: string): Promise<AppItem> {
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
+  const res = await safeFetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -90,7 +116,7 @@ export async function register(input: {
   displayName: string;
   preferredLocale?: string;
 }): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/auth/register`, {
+  const res = await safeFetch(`${API_BASE}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
@@ -99,8 +125,27 @@ export async function register(input: {
   return res.json();
 }
 
+export async function refresh(refreshToken: string): Promise<AuthResponse> {
+  const res = await safeFetch(`${API_BASE}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function logout(refreshToken: string): Promise<void> {
+  const res = await safeFetch(`${API_BASE}/auth/logout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+}
+
 export async function fetchMe(accessToken: string): Promise<AuthUser> {
-  const res = await fetch(`${API_BASE}/auth/me`, {
+  const res = await safeFetch(`${API_BASE}/auth/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: 'no-store',
   });
