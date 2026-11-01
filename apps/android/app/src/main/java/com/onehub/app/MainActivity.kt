@@ -7,16 +7,22 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.onehub.accesscontrol.repo.InMemoryAccessRepository
+import com.onehub.accesscontrol.ui.OwnerAdminScreen
+import com.onehub.accesscontrol.ui.OwnerLoginScreen
+import com.onehub.accesscontrol.ui.OwnerSetupScreen
+import com.onehub.accesscontrol.ui.RedeemCodeScreen
 import com.onehub.app.ui.AppDetailScreen
 import com.onehub.app.ui.AppsScreen
 import com.onehub.app.ui.HomeScreen
 import com.onehub.app.ui.LoginScreen
 import com.onehub.app.ui.RegisterScreen
-import com.onehub.app.ui.theme.OneHubTheme
+import com.onehub.core.design.OneHubTheme
+import com.onehub.navigation.OneHubNavHost
+import com.onehub.navigation.Routes
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,47 +31,80 @@ class MainActivity : ComponentActivity() {
         setContent {
             OneHubTheme {
                 val nav = rememberNavController()
+                // Phase 2: in-memory AC for foundation verification.
+                // Persistence + Backend adapter land when server enforcement is required.
+                val accessRepo = remember { InMemoryAccessRepository() }
+
                 Scaffold(modifier = Modifier.fillMaxSize()) { inner ->
-                    NavHost(
+                    OneHubNavHost(
                         navController = nav,
-                        startDestination = "home",
                         modifier = Modifier.padding(inner),
-                    ) {
-                        composable("home") {
+                        startDestination = Routes.HOME,
+                        home = {
                             HomeScreen(
-                                onApps = { nav.navigate("apps") },
-                                onLogin = { nav.navigate("login") },
-                                onRegister = { nav.navigate("register") },
+                                onApps = { nav.navigate(Routes.HUB_APPS) },
+                                onFeatureSlots = { nav.navigate(Routes.FEATURE_SLOTS) },
+                                onLogin = { nav.navigate(Routes.LOGIN) },
+                                onRegister = { nav.navigate(Routes.REGISTER) },
+                                onOwnerSetup = { nav.navigate(Routes.ACCESS_OWNER_SETUP) },
+                                onOwnerLogin = { nav.navigate(Routes.ACCESS_OWNER_LOGIN) },
+                                onRedeem = { nav.navigate(Routes.ACCESS_REDEEM) },
+                                onAdmin = { nav.navigate(Routes.ACCESS_ADMIN) },
                             )
-                        }
-                        composable("login") {
+                        },
+                        login = {
                             LoginScreen(
                                 onSuccess = {
-                                    nav.navigate("apps") {
-                                        popUpTo("home")
+                                    nav.navigate(Routes.HUB_APPS) {
+                                        popUpTo(Routes.HOME)
                                     }
                                 },
-                                onRegister = { nav.navigate("register") },
+                                onRegister = { nav.navigate(Routes.REGISTER) },
                             )
-                        }
-                        composable("register") {
+                        },
+                        register = {
                             RegisterScreen(
                                 onSuccess = {
-                                    nav.navigate("apps") {
-                                        popUpTo("home")
+                                    nav.navigate(Routes.HUB_APPS) {
+                                        popUpTo(Routes.HOME)
                                     }
                                 },
-                                onLogin = { nav.navigate("login") },
+                                onLogin = { nav.navigate(Routes.LOGIN) },
                             )
-                        }
-                        composable("apps") {
-                            AppsScreen(onAppClick = { id -> nav.navigate("app/$id") })
-                        }
-                        composable("app/{appId}") { entry ->
-                            val id = entry.arguments?.getString("appId") ?: return@composable
+                        },
+                        hubApps = {
+                            AppsScreen(onAppClick = { id -> nav.navigate(Routes.hubApp(id)) })
+                        },
+                        hubAppDetail = { id ->
                             AppDetailScreen(appId = id, onBack = { nav.popBackStack() })
-                        }
-                    }
+                        },
+                        accessOwnerSetup = {
+                            OwnerSetupScreen(
+                                repo = accessRepo,
+                                onDone = { nav.navigate(Routes.ACCESS_ADMIN) },
+                                onBack = { nav.popBackStack() },
+                            )
+                        },
+                        accessOwnerLogin = {
+                            OwnerLoginScreen(
+                                repo = accessRepo,
+                                onDone = { nav.navigate(Routes.ACCESS_ADMIN) },
+                                onBack = { nav.popBackStack() },
+                            )
+                        },
+                        accessAdmin = {
+                            OwnerAdminScreen(
+                                repo = accessRepo,
+                                onBack = { nav.popBackStack() },
+                            )
+                        },
+                        accessRedeem = {
+                            RedeemCodeScreen(
+                                repo = accessRepo,
+                                onBack = { nav.popBackStack() },
+                            )
+                        },
+                    )
                 }
             }
         }
