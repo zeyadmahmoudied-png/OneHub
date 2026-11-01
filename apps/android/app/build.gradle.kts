@@ -13,11 +13,8 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "0.2.0-phase2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // Override at build time: -PAPI_BASE_URL=https://your-api.example
-        // Emulator default: host machine loopback via 10.0.2.2
-        // Physical device on same LAN: use your PC LAN IP, e.g. http://192.168.1.10:3000
         val apiBase =
             (project.findProperty("API_BASE_URL") as String?)
                 ?: "http://10.0.2.2:3000"
@@ -31,7 +28,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // Release builds must set a real API base; refuse silent localhost.
             val releaseApi =
                 (project.findProperty("API_BASE_URL") as String?)
                     ?: ""
@@ -46,9 +42,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    kotlinOptions { jvmTarget = "17" }
     buildFeatures {
         compose = true
         buildConfig = true
@@ -56,6 +50,11 @@ android {
 }
 
 dependencies {
+    implementation(project(":core"))
+    implementation(project(":navigation"))
+    implementation(project(":accesscontrol"))
+    implementation(project(":features:slots"))
+
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
