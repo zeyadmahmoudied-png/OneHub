@@ -13,13 +13,12 @@ import java.util.UUID
 
 /**
  * Stateless rules engine — unit-testable without Android framework.
- * Persistence is handled by [com.onehub.accesscontrol.repo.AccessRepository].
  */
 class AccessEngine(
     private val random: SecureRandom = SecureRandom(),
     private val idFactory: () -> String = { UUID.randomUUID().toString() },
 ) {
-    fun hashCode(plaintext: String): String {
+    fun hashCodeValue(plaintext: String): String {
         val digest = MessageDigest.getInstance("SHA-256")
         val bytes = digest.digest(plaintext.toByteArray(Charsets.UTF_8))
         return bytes.joinToString("") { "%02x".format(it) }
@@ -48,7 +47,7 @@ class AccessEngine(
         return sb.toString()
     }
 
-    fun issueCode(
+    fun issueCodeWithAudit(
         ownerId: String,
         permissionIds: List<String>,
         validFromEpochMs: Long,
@@ -56,8 +55,10 @@ class AccessEngine(
         maxUses: Int?,
         label: String,
         nowEpochMs: Long,
-    ): Result<IssuedCode> {
-        if (permissionIds.isEmpty()) return Result.failure(IllegalArgumentException("permissions required"))
+    ): Result<Pair<IssuedCode, AuditEvent>> {
+        if (permissionIds.isEmpty()) {
+            return Result.failure(IllegalArgumentException("permissions required"))
+        }
         if (permissionIds.any { it == Permission.ADMIN_TOOLS.id }) {
             return Result.failure(
                 SecurityException("ADMIN_TOOLS cannot be granted via a permission code"),
@@ -69,10 +70,11 @@ class AccessEngine(
         if (maxUses != null && maxUses <= 0) {
             return Result.failure(IllegalArgumentException("maxUses must be positive"))
         }
+
         val plain = generatePlaintextCode()
         val code = PermissionCode(
             id = idFactory(),
-            codeHash = hashCode(plain),
+            codeHash = hashCodeValue(plain),
             permissionIds = permissionIds.distinct(),
             validFromEpochMs = validFromEpochMs,
             validToEpochMs = validToEpochMs,
@@ -82,38 +84,13 @@ class AccessEngine(
             boundUserId = null,
             label = label.ifBlank { "code" },
         )
+        val issued = IssuedCode(code = code, plaintextOnce = plain)
         val audit = AuditEvent(
             id = idFactory(),
             atEpochMs = nowEpochMs,
             action = "code.issued",
             actorUserId = ownerId,
             detail = "codeId=${code.id} perms=${code.permissionIds.joinToString()}",
-        )
-        return Result.success(IssuedCode(code, plain) to audit).map { it.first }.also { }
-            .let {
-                // Return issued + audit separately via Pair in caller — keep IssuedCode pure
-                Result.success(IssuedCode(code, plain))
-            }
-    }
-
-    fun issueCodeWithAudit(
-        ownerId: String,
-        permissionIds: List<String>,
-        validFromEpochMs: Long,
-        validToEpochMs: Long?,
-        maxUses: Int?,
-        label: String,
-        nowEpochMs: Long,
-    ): Result<Pair<IssuedCode, AuditEvent>> {
-        val issued = issueCode(
-            ownerId, permissionIds, validFromEpochMs, validToEpochMs, maxUses, label, nowEpochMs,
-        ).getOrElse { return Result.failure(it) }
-        val audit = AuditEvent(
-            id = idFactory(),
-            atEpochMs = nowEpochMs,
-            action = "code.issued",
-            actorUserId = ownerId,
-            detail = "codeId=${issued.code.id} perms=${issued.code.permissionIds.joinToString()}",
         )
         return Result.success(issued to audit)
     }
@@ -127,7 +104,7 @@ class AccessEngine(
         if (user.isOwner) {
             return Result.failure(IllegalStateException("Owner does not redeem codes"))
         }
-        val hash = hashCode(plaintext.trim())
+        val hash = hashCodeValue(plaintext.trim())
         val code = codes.find { it.codeHash == hash }
             ?: return Result.failure(IllegalArgumentException("Invalid code"))
         if (code.revoked) return Result.failure(IllegalStateException("Code revoked"))
